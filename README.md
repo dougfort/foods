@@ -8,14 +8,21 @@ simple website storing favorite foods
 
 ## API
 
-the API scheme is
-
  * ```GET /foods/<user name>``` returns a list of the user's favorite foods
  * ```POST /foods/<user name/<food name>``` stores new food
 
- each request must include a (base64 encoded)  authentication string consisting of the transaction details hashed with the client token.
+The spec says: "Protect your API and differentiate your API's clients with some kind of client token scheme".
+
+I have taken the liberty of introducing user name. Each client has a public name and an authentication token.
+
+each request must include a (base64 encoded)  authentication string consisting of the transaction details hashed with the client token.
+
+So a partial URL would be
+```/foods/<user name>?auth=<auth string>```
 
 ## client tokens
+
+The client token serves as a shared secret between the client and server. The token itself is never transmitted.
 
 client tokens for testing are stored in tokens.json in the form
 ```
