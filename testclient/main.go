@@ -69,35 +69,118 @@ func makeTokens(cfg config) {
 }
 
 func runTest(cfg config) {
+	const food1 = "broccolli"
+	const food2 = "mango"
+
 	var tokens []clienttokens.ClientToken
+	var foods []string
 	var err error
 
 	if tokens, err = clienttokens.Load(cfg.configPath); err != nil {
 		log.Fatalf("clienttokens.Load failed: %s", err)
 	}
 
-	client := http.Client{}
+	baseURL := fmt.Sprintf("http://localhost:%s/foods", cfg.port)
 
-	t := tokens[0]
-	url := fmt.Sprintf("http://localhost:%s/foods/%s?auth=%s",
-		cfg.port,
+	// verify that the user has no foods at start
+	if foods, err = get(baseURL, tokens[0]); err != nil {
+		log.Fatalf("first get failed: %s", err)
+	}
+	if len(foods) != 0 {
+		log.Fatalf("expected empty foods: %s", foods)
+	}
+
+	// add a food
+	if err = post(baseURL, tokens[0], food1); err != nil {
+		log.Fatalf("first post failed: %s", err)
+	}
+
+	// now we should see a food
+	if foods, err = get(baseURL, tokens[0]); err != nil {
+		log.Fatalf("2nd get failed: %s", err)
+	}
+	if len(foods) != 1 {
+		log.Fatalf("expected 1 foods: %s", foods)
+	}
+	if foods[0] != food1 {
+		log.Fatalf("invalid food '%s' expected '%s'", foods[0], food1)
+	}
+
+	// add another food
+	if err = post(baseURL, tokens[0], food2); err != nil {
+		log.Fatalf("first post failed: %s", err)
+	}
+
+	// now we should see two foods
+	if foods, err = get(baseURL, tokens[0]); err != nil {
+		log.Fatalf("3rd get failed: %s", err)
+	}
+	if len(foods) != 2 {
+		log.Fatalf("expected 1 foods: %s", foods)
+	}
+	if foods[1] != food2 {
+		log.Fatalf("invalid food '%s' expected '%s'", foods[1], food2)
+	}
+}
+
+func get(
+	baseURL string,
+	t clienttokens.ClientToken,
+) ([]string, error) {
+	var foods []string
+	var data []byte
+	var err error
+
+	client := http.Client{}
+	url := fmt.Sprintf("%s/%s?auth=%s",
+		baseURL,
 		t.Client,
 		auth.String(t.Token, "GET", t.Client, ""))
 	resp, err := client.Get(url)
 	if err != nil {
-		log.Fatalf("get failed: %s", err)
+		return nil, fmt.Errorf("Get failed: %s", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		log.Fatalf("invalid status: (%d) %s",
+		return nil, fmt.Errorf("invalid status: (%d) %s",
 			resp.StatusCode, resp.Status)
 	}
-	_, err = ioutil.ReadAll(resp.Body)
+	data, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("error reading body: %s", err)
+		return nil, fmt.Errorf("error reading body: %s", err)
 	}
 
-	log.Printf("response: %v", resp)
+	if err = json.Unmarshal(data, &foods); err != nil {
+		return nil, fmt.Errorf("Unmarshal failed: %s", err)
+	}
+
+	return foods, nil
+}
+
+func post(
+	baseURL string,
+	t clienttokens.ClientToken,
+	food string,
+) error {
+	var err error
+
+	client := http.Client{}
+	url := fmt.Sprintf("%s/%s/%s?auth=%s",
+		baseURL,
+		t.Client,
+		food,
+		auth.String(t.Token, "POST", t.Client, food))
+	resp, err := client.Post(url, "text/html", nil)
+	if err != nil {
+		return fmt.Errorf("Post failed: %s", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("invalid status: (%d) %s",
+			resp.StatusCode, resp.Status)
+	}
+
+	return nil
 }
 
 func loadConfig() (config, error) {

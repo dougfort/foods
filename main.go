@@ -22,6 +22,7 @@ func run() int {
 	var cfg config.Config
 	var str *storage.Storage
 	var tokens []clienttokens.ClientToken
+	var names []string
 	var err error
 
 	sigChan := make(chan os.Signal, 1)
@@ -33,8 +34,18 @@ func run() int {
 		return -1
 	}
 
-	// open db,
-	if str, err = storage.New(cfg.DBPath); err != nil {
+	if tokens, err = clienttokens.Load(cfg.ConfigPath); err != nil {
+		log.Printf("clienttokens.Load failed: %s", err)
+	}
+
+	// get the names for initalzing the db
+	names = make([]string, len(tokens))
+	for i := range tokens {
+		names[i] = tokens[i].Client
+	}
+
+	// open db, initialize all existing names
+	if str, err = storage.New(cfg.DBPath, names); err != nil {
 		log.Printf("storage.New() failed: %s", err)
 		return -1
 	}
@@ -43,10 +54,6 @@ func run() int {
 			log.Printf("error closing storage: %s", err)
 		}
 	}()
-
-	if tokens, err = clienttokens.Load(cfg.ConfigPath); err != nil {
-		log.Printf("clienttokens.Load failed: %s", err)
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
