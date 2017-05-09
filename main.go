@@ -19,7 +19,7 @@ func main() {
 
 func run() int {
 	var cfg config.Config
-	var str storage.Storage
+	var str *storage.Storage
 	var err error
 
 	sigChan := make(chan os.Signal, 1)
@@ -32,16 +32,21 @@ func run() int {
 	}
 
 	// open db,
-	if std, err = storage.New(); err != nil {
+	if str, err = storage.New(cfg.DBPath); err != nil {
 		log.Printf("storage.New() failed: %s", err)
 		return -1
 	}
+	defer func() {
+		if err := str.Close(); err != nil {
+			log.Printf("error closing storage: %s", err)
+		}
+	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// start server (this will run until the program is killed)
 	// TODO: orderly shutdown with cancel
-	go foodserv.Serve(ctx, cfg, str)
+	go server.Serve(ctx, cfg, str)
 
 	// block until sigterm
 	s := <-sigChan
