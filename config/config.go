@@ -8,8 +8,7 @@ type Config struct {
 
 	DBPath string
 
-	// Tokens is the list of valid client tokens
-	Tokens []string
+	ConfigPath string
 }
 
 // Load the configuration from external sources
@@ -18,6 +17,7 @@ func Load() (Config, error) {
 
 	flag.StringVar(&cfg.Port, "port", "8080", "port for the server to listen on")
 	flag.StringVar(&cfg.DBPath, "dbpath", "/tmp/foods.db", "path to the database")
+	flag.StringVar(&cfg.ConfigPath, "token-path", "", "path to client tokens")
 
 	flag.Parse()
 	return cfg, nil

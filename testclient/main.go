@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 
+	"github.com/dougfort/foods/auth"
 	"github.com/dougfort/foods/clienttokens"
-	"net/http"
 )
 
 type config struct {
@@ -73,15 +75,27 @@ func runTest(cfg config) {
 	if tokens, err = clienttokens.Load(cfg.configPath); err != nil {
 		log.Fatalf("clienttokens.Load failed: %s", err)
 	}
-	log.Printf("tokens = %v", tokens)
 
 	client := http.Client{}
-	resp, err := client.Get(fmt.Sprintf("http://localhost:%s/xxx", cfg.port))
+
+	t := tokens[0]
+	url := fmt.Sprintf("http://localhost:%s/foods/%s?auth=%s",
+		cfg.port,
+		t.Client,
+		auth.String(t.Token, "GET", t.Client, ""))
+	resp, err := client.Get(url)
 	if err != nil {
 		log.Fatalf("get failed: %s", err)
 	}
 	defer resp.Body.Close()
-	// body, err := ioutil.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		log.Fatalf("invalid status: (%d) %s",
+			resp.StatusCode, resp.Status)
+	}
+	_, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatalf("error reading body: %s", err)
+	}
 
 	log.Printf("response: %v", resp)
 }

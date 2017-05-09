@@ -4,4 +4,6 @@
 set -e
 set -x
 
-$GOPATH/bin/foods 2> /tmp/foods.log
+$GOPATH/bin/foods \
+	--token-path=$GOPATH/src/github.com/dougfort/foods/tokens.json \
+	2> /tmp/foods.log

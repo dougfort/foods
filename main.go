@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/dougfort/foods/clienttokens"
 	"github.com/dougfort/foods/config"
 	"github.com/dougfort/foods/server"
 	"github.com/dougfort/foods/storage"
@@ -20,6 +21,7 @@ func main() {
 func run() int {
 	var cfg config.Config
 	var str *storage.Storage
+	var tokens []clienttokens.ClientToken
 	var err error
 
 	sigChan := make(chan os.Signal, 1)
@@ -37,16 +39,20 @@ func run() int {
 		return -1
 	}
 	defer func() {
-		if err := str.Close(); err != nil {
+		if err = str.Close(); err != nil {
 			log.Printf("error closing storage: %s", err)
 		}
 	}()
+
+	if tokens, err = clienttokens.Load(cfg.ConfigPath); err != nil {
+		log.Printf("clienttokens.Load failed: %s", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// start server (this will run until the program is killed)
 	// TODO: orderly shutdown with cancel
-	go server.Serve(ctx, cfg, str)
+	go server.Serve(ctx, cfg, str, tokens)
 
 	// block until sigterm
 	s := <-sigChan
