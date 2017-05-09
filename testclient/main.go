@@ -121,6 +121,8 @@ func runTest(cfg config) {
 	if foods[1] != food2 {
 		log.Fatalf("invalid food '%s' expected '%s'", foods[1], food2)
 	}
+
+	log.Println("test successful")
 }
 
 func get(
